@@ -113,8 +113,8 @@
       const manualBox = document.getElementById('manualBox');
       
       if (debugBox) {
-        const list = Array.from(ownedPokemonSet).join(', ') || 'None';
-        debugBox.innerHTML = `✓ Connected to Sheet! Owned Pokémon: <b style="color:var(--accent-green)">${list}</b>`;
+        // Shows count instead of listing all names to keep interface clean
+        debugBox.innerHTML = `<span style="color:var(--accent-green)">✓ Connected to Sheet! (${ownedPokemonSet.size} Pokémon Loaded)</span>`;
       }
       if (manualBox) manualBox.style.display = 'none';
     }
@@ -124,7 +124,6 @@
       const manualBox = document.getElementById('manualBox');
 
       try {
-        // Direct fetch from Google Sheets with cache-busting timestamp
         const cacheBusterUrl = `${CSV_LINK}&t=${Date.now()}`;
         const res = await fetch(cacheBusterUrl);
         
@@ -143,7 +142,6 @@
       } catch (err) {
         console.warn('Direct fetch failed, trying proxy fallback...', err);
         
-        // Fallback via CORS proxy if direct fetch is blocked
         try {
           const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(CSV_LINK)}`;
           const res = await fetch(proxyUrl);
