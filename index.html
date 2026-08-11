@@ -21,7 +21,7 @@
     header h1 { color: var(--accent-red); font-size: 2.2rem; margin-bottom: 5px; }
     header p { color: var(--text-muted); }
 
-    #debugStatus { text-align: center; font-size: 0.85rem; color: #94a3b8; margin-bottom: 20px; }
+    #debugStatus { text-align: center; font-size: 0.85rem; color: #94a3b8; margin-bottom: 15px; }
     
     .manual-box {
       max-width: 500px; margin: 0 auto 20px auto; background: var(--card-bg);
@@ -82,18 +82,32 @@
   </style>
 
   <script>
+    // Direct Published Google Sheet CSV Link
+    const CSV_LINK = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSOKm-ncx04X6arOfeV1MNW5Yzk5Yox1s38W7671moh3iIOwu5U49uC62svNn2v2NNPWZYy6FtxKbbA/pub?gid=0&single=true&output=csv';
+
     let ownedPokemonSet = new Set();
 
-    // Clean name helper
-    function cleanPokemonName(str) {
-      if (!str) return null;
-      const clean = String(str).toLowerCase().split('-')[0].replace(/[^a-z0-9]/g, '').trim();
-      const invalid = ['pokemon_name', 'pokemonname', 'name', 'pokemon', 'data', 'datatextcsvbase64'];
-      if (!clean || invalid.includes(clean) || clean.includes('data:text')) return null;
-      return clean;
+    function parseCSV(text) {
+      if (!text || text.includes('<!DOCTYPE')) {
+        throw new Error('Received non-CSV response');
+      }
+
+      const lines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l);
+      const set = new Set();
+      
+      for (let i = 0; i < lines.length; i++) {
+        const cols = lines[i].split(',').map(c => c.trim().replace(/^"|"$/g, ''));
+        if (cols[0]) {
+          const cleanName = cols[0].toLowerCase().split('-')[0].trim();
+          if (cleanName && cleanName !== 'pokemon_name' && cleanName !== 'name' && cleanName !== 'pokemon') {
+            set.add(cleanName);
+          }
+        }
+      }
+      return set;
     }
 
-    function setInventory(set) {
+    function updateInventoryDisplay(set) {
       ownedPokemonSet = set;
       const debugBox = document.getElementById('debugStatus');
       const manualBox = document.getElementById('manualBox');
@@ -105,50 +119,65 @@
       if (manualBox) manualBox.style.display = 'none';
     }
 
-    // Google Visualization API callback (native JSONP support)
-    window.handleGvizResponse = function(response) {
-      if (!response || !response.table || !response.table.rows) return;
-      const set = new Set();
-      
-      response.table.rows.forEach(row => {
-        if (row.c && row.c[0] && row.c[0].v !== null) {
-          const name = cleanPokemonName(row.c[0].v);
-          if (name) set.add(name);
+    async function loadInventory() {
+      const debugBox = document.getElementById('debugStatus');
+      const manualBox = document.getElementById('manualBox');
+
+      try {
+        // Direct fetch from Google Sheets with cache-busting timestamp
+        const cacheBusterUrl = `${CSV_LINK}&t=${Date.now()}`;
+        const res = await fetch(cacheBusterUrl);
+        
+        if (!res.ok) throw new Error(`HTTP Error ${res.status}`);
+        
+        const text = await res.text();
+        const set = parseCSV(text);
+        
+        if (set.size > 0) {
+          updateInventoryDisplay(set);
+          return;
+        } else {
+          throw new Error('Sheet returned 0 Pokémon');
         }
-      });
 
-      if (set.size > 0) {
-        setInventory(set);
+      } catch (err) {
+        console.warn('Direct fetch failed, trying proxy fallback...', err);
+        
+        // Fallback via CORS proxy if direct fetch is blocked
+        try {
+          const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(CSV_LINK)}`;
+          const res = await fetch(proxyUrl);
+          const text = await res.text();
+          const set = parseCSV(text);
+          
+          if (set.size > 0) {
+            updateInventoryDisplay(set);
+            return;
+          }
+        } catch (proxyErr) {
+          console.error('All automated fetch attempts failed:', proxyErr);
+          if (debugBox) {
+            debugBox.innerHTML = `<span style="color:var(--accent-gold)">⚠️ Couldn't auto-fetch Google Sheet. Use manual paste below:</span>`;
+          }
+          if (manualBox) manualBox.style.display = 'block';
+        }
       }
-    };
-
-    function loadInventory() {
-      // Direct Google Visualization script injection
-      const gvizUrl = `https://docs.google.com/spreadsheets/d/e/2PACX-1vSOKm-ncx04X6arOfeV1MNW5Yzk5Yox1s38W7671moh3iIOwu5U49uC62svNn2v2NNPWZYy6FtxKbbA/gviz/tq?tqx=responseHandler:handleGvizResponse&t=${Date.now()}`;
-      
-      const script = document.createElement('script');
-      script.src = gvizUrl;
-      script.onerror = () => {
-        const debugBox = document.getElementById('debugStatus');
-        const manualBox = document.getElementById('manualBox');
-        if (debugBox) debugBox.innerHTML = `<span style="color:var(--accent-gold)">⚠️ Couldn't auto-fetch Google Sheet. Use manual paste below:</span>`;
-        if (manualBox) manualBox.style.display = 'block';
-      };
-      document.body.appendChild(script);
     }
 
     function processManualData() {
       const input = document.getElementById('manualCsvInput').value;
-      const lines = input.split(/[\n,]+/).map(s => s.trim()).filter(s => s);
+      const lines = input.split(/[\n,]+/).map(s => s.trim().toLowerCase()).filter(s => s);
       const set = new Set();
       
       lines.forEach(item => {
-        const name = cleanPokemonName(item);
-        if (name && name !== 'ironfist') set.add(name);
+        const clean = item.split('-')[0].trim();
+        if (clean && clean !== 'pokemon_name') {
+          set.add(clean);
+        }
       });
 
       if (set.size > 0) {
-        setInventory(set);
+        updateInventoryDisplay(set);
       } else {
         alert('No valid Pokémon names found.');
       }
