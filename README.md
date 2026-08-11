@@ -14,7 +14,6 @@ A fast, lightweight web application built for **Cobblemon** players to quickly s
 - **Live Google Sheets Auto-Sync:** Direct integration with a published Google Sheet CSV feed to sync your collection automatically on load.
 - **Hidden Ability Lookup:** Instantly fetches Pokémon types, Hidden Abilities, and Gen 5 animated/pixelated sprites via PokéAPI and Pokémon Showdown assets.
 - **Collection Status Indicator:** Highlights whether a searched Pokémon is **`✓ IN COLLECTION`** or **`✗ NOT IN COLLECTION`**.
-- **Regional & Form Variant Support:** Handles special forms, regional variants (Alolan, Galarian, Hisuian, Paldean), gendered forms, and multi-form species seamlessly.
 - **Manual Backup Mode:** Includes an interactive fallback menu to manually paste inventory lists if browser or network restrictions block fetching.
 
 ---
