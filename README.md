@@ -1,6 +1,6 @@
-# ⚡ Cobblemon HA Checker & Collection Tracker
+# ⚡ Cobblemon HA Collection Checker
 
-A fast, lightweight web application built for **Cobblemon** players to quickly search any Pokémon, look up its **Hidden Ability (HA)**, and check whether it is currently in your collection via live Google Sheets auto-sync.
+A fast, responsive web application designed for **Cobblemon** players to search any Pokémon, view its **Hidden Ability (HA)** and types, and check whether it is in your collection via live Google Sheets auto-sync.
 
 ![HTML5](https://img.shields.io/badge/HTML5-E34F26?style=for-the-badge&logo=html5&logoColor=white)
 ![CSS3](https://img.shields.io/badge/CSS3-1572B6?style=for-the-badge&logo=css3&logoColor=white)
@@ -11,14 +11,32 @@ A fast, lightweight web application built for **Cobblemon** players to quickly s
 
 ## ✨ Features
 
-- **Live Google Sheets Auto-Sync:** Direct integration with a published Google Sheet CSV feed to sync your collection automatically on load.
-- **Hidden Ability Lookup:** Instantly fetches Pokémon types, Hidden Abilities, and Gen 5 animated/pixelated sprites via PokéAPI and Pokémon Showdown assets.
-- **Collection Status Indicator:** Highlights whether a searched Pokémon is **`✓ IN COLLECTION`** or **`✗ NOT IN COLLECTION`**.
-- **Manual Backup Mode:** Includes an interactive fallback menu to manually paste inventory lists if browser or network restrictions block fetching.
+- **Live Google Sheets Auto-Sync:** Fetches your owned Pokémon automatically from a published Google Sheet CSV feed on load (with CORS proxy fallback).
+- **Hidden Ability Lookup:** Uses PokéAPI to fetch official Hidden Abilities, types, and animated Gen 5 sprites from Pokémon Showdown.
+- **Smart Form & Regional Variant Support:** Handles special regional variants (Alolan, Galarian, Hisuian, Paldean), gendered forms (`nidoran-f`, `nidoran-m`), and multi-form species (`wormadam`, `pumpkaboo`, `toxtricity`).
+- **Manual Input Backup:** Fallback modal allows manual pasting of inventory lists if network restrictions prevent automatic Google Sheet fetches.
 
 ---
 
 ## 🚀 Live Demo
 
-Check out the live web app hosted on GitHub Pages:
+Check out the live webpage hosted on GitHub:
 👉 **[Cobblemon HA Checker Live](https://hugobooi.github.io/HA-Checker/)**
+
+---
+
+## 📊 Setting Up Your Google Sheet
+
+To connect your own Pokémon collection to the app:
+
+1. Create a **Google Sheet**.
+2. List your owned Pokémon in **Column A** (one entry per row, e.g., `chimchar`, `vulpix-alola`, `darmanitan-galar`).
+3. Publish your sheet:
+   - Click **File** $\rightarrow$ **Share** $\rightarrow$ **Publish to web**.
+   - Change "Entire Document" to your specific sheet tab.
+   - Select **Comma-separated values (.csv)**.
+   - Click **Publish** and copy the URL.
+4. Replace the `CSV_LINK` constant in `index.html`:
+
+```javascript
+const CSV_LINK = 'YOUR_PUBLISHED_CSV_LINK_HERE';
