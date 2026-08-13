@@ -29,7 +29,7 @@ Check out the live webpage hosted on GitHub:
 To create your own HA Checker
 
 1. Create a **Google Sheet**.
-2. Inset **pokemon_name** in Column A1
+2. Inset **pokemon_name** as the Column A1
 3. List your owned Pokémon starting in**Column A2** (one entry per row, e.g., `chimchar`, `monferno`, `darmanitan-galar`).
 4. Publish your sheet:
    - Click **File** $\rightarrow$ **Share** $\rightarrow$ **Publish to web**.
