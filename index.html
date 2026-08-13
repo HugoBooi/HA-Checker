@@ -193,7 +193,7 @@
 
       const originalSearchInput = rawInput;
 
-      // 1. Direct alias mapping for regional shorthand names
+      // 1. Direct alias mapping for form & regional shorthand names
       const aliasMap = {
         'darmanitan-galar': 'darmanitan-galar-standard',
         'darmanitan-galaria': 'darmanitan-galar-standard',
@@ -208,11 +208,10 @@
       }
 
       try {
-        // Try direct endpoint first (e.g. darmanitan-galar-standard or vulpix-alola)
         let res = await fetch(`https://pokeapi.co/api/v2/pokemon/${rawInput}`);
         let data;
 
-        // 2. If direct fetch fails, strip regional/form tags to get base species name for fallback
+        // 2. Fallback for base names with default varieties (e.g., pumpkaboo, wormadam, darmanitan)
         if (!res.ok) {
           const baseSpeciesQuery = rawInput.split('-')[0];
           const speciesRes = await fetch(`https://pokeapi.co/api/v2/pokemon-species/${baseSpeciesQuery}`);
@@ -227,7 +226,6 @@
         }
 
         const formName = data.name.toLowerCase();
-        const speciesName = data.species.name.toLowerCase();
         const types = data.types.map(t => t.type.name);
 
         const haObj = data.abilities.find(a => a.is_hidden);
@@ -235,11 +233,10 @@
         
         const formattedName = formName.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
 
-        // Check exact form name, raw input, base species name, or regional form entries in sheet
+        // STRICT CHECKING: Only checks the exact form name, alias map target, or raw user input string
         const isOwned = ownedPokemonSet.has(formName) || 
                         ownedPokemonSet.has(originalSearchInput) ||
-                        ownedPokemonSet.has(speciesName) || 
-                        Array.from(ownedPokemonSet).some(item => item.startsWith(`${speciesName}-`));
+                        ownedPokemonSet.has(rawInput);
 
         // Format sprite filenames for Showdown assets
         let spriteName = formName;
