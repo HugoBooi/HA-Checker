@@ -98,7 +98,7 @@
       for (let i = 0; i < lines.length; i++) {
         const cols = lines[i].split(',').map(c => c.trim().replace(/^"|"$/g, ''));
         if (cols[0]) {
-          // Keeps exact form names (e.g. "vulpix", "vulpix-alola", "nidoran-f")
+          // Preserves exact form entries (e.g. "vulpix-alola", "darmanitan-galar")
           const cleanName = cols[0].toLowerCase().trim();
           if (cleanName && cleanName !== 'pokemon_name' && cleanName !== 'name' && cleanName !== 'pokemon') {
             set.add(cleanName);
@@ -193,24 +193,44 @@
       container.innerHTML = '<p class="loading">Searching Pokémon database...</p>';
 
       try {
-        const res = await fetch(`https://pokeapi.co/api/v2/pokemon/${rawInput}`);
-        if (!res.ok) throw new Error('Not found');
-        const data = await res.json();
+        let res = await fetch(`https://pokeapi.co/api/v2/pokemon/${rawInput}`);
+        let data;
 
-        // Use data.name for exact regional/form variant matching (e.g. "vulpix-alola")
-        const formName = data.name.toLowerCase(); 
+        // Fallback for multi-form base names (e.g., pumpkaboo, wormadam, toxtricity, darmanitan)
+        if (!res.ok) {
+          const speciesRes = await fetch(`https://pokeapi.co/api/v2/pokemon-species/${rawInput}`);
+          if (!speciesRes.ok) throw new Error('Not found');
+          const speciesData = await speciesRes.json();
+          
+          const defaultVariety = speciesData.varieties.find(v => v.is_default) || speciesData.varieties[0];
+          res = await fetch(defaultVariety.pokemon.url);
+          data = await res.json();
+        } else {
+          data = await res.json();
+        }
+
+        const formName = data.name.toLowerCase();
+        const speciesName = data.species.name.toLowerCase();
         const types = data.types.map(t => t.type.name);
 
         const haObj = data.abilities.find(a => a.is_hidden);
         const hasHiddenAbility = Boolean(haObj);
         
         const formattedName = formName.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-        const isOwned = ownedPokemonSet.has(formName);
 
-        // Handles Showdown sprite URLs (Nidoran: nidoranf/nidoranm; Regional forms: vulpix-alola)
+        // Check exact form name, base species name, or any variant of that species in sheet
+        const isOwned = ownedPokemonSet.has(formName) || 
+                        ownedPokemonSet.has(speciesName) || 
+                        Array.from(ownedPokemonSet).some(item => item.startsWith(`${speciesName}-`));
+
+        // Format sprite filenames for Showdown assets
         let spriteName = formName;
         if (formName === 'nidoran-f' || formName === 'nidoran-m') {
           spriteName = formName.replace('-', '');
+        } else if (formName === 'darmanitan-galar-standard') {
+          spriteName = 'darmanitan-galar';
+        } else if (formName === 'darmanitan-standard') {
+          spriteName = 'darmanitan';
         }
 
         const showdownSprite = `https://play.pokemonshowdown.com/sprites/gen5/${spriteName}.png`;
@@ -274,13 +294,13 @@
 
   <!-- Manual Input Backup Box -->
   <div class="manual-box" id="manualBox" style="display: none;">
-    <p style="font-size: 0.85rem; margin-bottom: 8px;">Paste Pokémon List (e.g., <code>vulpix, vulpix-alola, nidoran-f</code>):</p>
-    <input type="text" id="manualCsvInput" placeholder="vulpix, vulpix-alola">
+    <p style="font-size: 0.85rem; margin-bottom: 8px;">Paste Pokémon List (e.g., <code>chimchar, pumpkaboo, vulpix-alola</code>):</p>
+    <input type="text" id="manualCsvInput" placeholder="chimchar, vulpix-alola">
     <button onclick="processManualData()">Set Inventory</button>
   </div>
 
   <div class="search-box">
-    <input type="text" id="searchInput" placeholder="Type Pokémon name (e.g. infernape)...">
+    <input type="text" id="searchInput" placeholder="Type Pokémon name (e.g. chimchar, wormadam, darmanitan-galar)...">
     <button class="btn" id="searchBtn">Search</button>
   </div>
 
