@@ -98,7 +98,8 @@
       for (let i = 0; i < lines.length; i++) {
         const cols = lines[i].split(',').map(c => c.trim().replace(/^"|"$/g, ''));
         if (cols[0]) {
-          const cleanName = cols[0].toLowerCase().split('-')[0].trim();
+          // Preserves full hyphenated names like "nidoran-f", "nidoran-m", "vulpix-alola"
+          const cleanName = cols[0].toLowerCase().trim();
           if (cleanName && cleanName !== 'pokemon_name' && cleanName !== 'name' && cleanName !== 'pokemon') {
             set.add(cleanName);
           }
@@ -113,7 +114,6 @@
       const manualBox = document.getElementById('manualBox');
       
       if (debugBox) {
-        // Shows count instead of listing all names to keep interface clean
         debugBox.innerHTML = `<span style="color:var(--accent-green)">✓ Connected to Sheet! (${ownedPokemonSet.size} Pokémon Loaded)</span>`;
       }
       if (manualBox) manualBox.style.display = 'none';
@@ -168,7 +168,7 @@
       const set = new Set();
       
       lines.forEach(item => {
-        const clean = item.split('-')[0].trim();
+        const clean = item.trim();
         if (clean && clean !== 'pokemon_name') {
           set.add(clean);
         }
@@ -197,7 +197,7 @@
         if (!res.ok) throw new Error('Not found');
         const data = await res.json();
 
-        const baseSpeciesName = data.species.name.toLowerCase();
+        const baseSpeciesName = data.species.name.toLowerCase(); // e.g., "nidoran-f"
         const types = data.types.map(t => t.type.name);
 
         const haObj = data.abilities.find(a => a.is_hidden);
@@ -206,7 +206,9 @@
         const formattedName = baseSpeciesName.charAt(0).toUpperCase() + baseSpeciesName.slice(1);
         const isOwned = ownedPokemonSet.has(baseSpeciesName);
 
-        const showdownSprite = `https://play.pokemonshowdown.com/sprites/gen5/${baseSpeciesName}.png`;
+        // Showdown sprites require removing hyphens for Nidoran (nidoranf / nidoranm)
+        const showdownSpriteName = baseSpeciesName.replace(/-/g, '');
+        const showdownSprite = `https://play.pokemonshowdown.com/sprites/gen5/${showdownSpriteName}.png`;
         const defaultSprite = data.sprites.front_default || 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/0.png';
 
         container.innerHTML = `
@@ -267,13 +269,13 @@
 
   <!-- Manual Input Backup Box -->
   <div class="manual-box" id="manualBox" style="display: none;">
-    <p style="font-size: 0.85rem; margin-bottom: 8px;">Paste Pokémon List (e.g., <code>chimchar, monferno</code>):</p>
+    <p style="font-size: 0.85rem; margin-bottom: 8px;">Paste Pokémon List (e.g., <code>chimchar, monferno, nidoran-f</code>):</p>
     <input type="text" id="manualCsvInput" placeholder="chimchar, iron fist">
     <button onclick="processManualData()">Set Inventory</button>
   </div>
 
   <div class="search-box">
-    <input type="text" id="searchInput" placeholder="Type Pokémon name (e.g. chimchar, monferno, infernape)...">
+    <input type="text" id="searchInput" placeholder="Type Pokémon name (e.g. chimchar, nidoran-f, infernape)...">
     <button class="btn" id="searchBtn">Search</button>
   </div>
 
