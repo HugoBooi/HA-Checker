@@ -1,310 +1,111 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Cobblemon HA Shop & Checker</title>
-  <style>
-    :root {
-      --bg-color: #0f172a;
-      --card-bg: #1e293b;
-      --accent-red: #ef4444;
-      --accent-gold: #f59e0b;
-      --accent-green: #22c55e;
-      --text-main: #f8fafc;
-      --text-muted: #94a3b8;
-      --border-color: #334155;
-    }
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
-    body { background-color: var(--bg-color); color: var(--text-main); padding: 20px; min-height: 100vh; }
-    header { text-align: center; margin-bottom: 15px; }
-    header h1 { color: var(--accent-red); font-size: 2.2rem; margin-bottom: 5px; }
-    header p { color: var(--text-muted); }
+async function searchPokemon() {
+  let rawInput = document.getElementById('searchInput').value.toLowerCase().trim();
+  const container = document.getElementById('resultContainer');
+  
+  if (!rawInput) {
+    container.innerHTML = '';
+    return;
+  }
 
-    #debugStatus { text-align: center; font-size: 0.85rem; color: #94a3b8; margin-bottom: 15px; }
+  container.innerHTML = '<p class="loading">Searching Pokémon database...</p>';
+
+  const originalSearchInput = rawInput;
+
+  // 1. Direct alias mapping for regional shorthand names
+  const aliasMap = {
+    'darmanitan-galar': 'darmanitan-galar-standard',
+    'darmanitan-galaria': 'darmanitan-galar-standard',
+    'darmanitan-galarian': 'darmanitan-galar-standard',
+    'tauros-paldea': 'tauros-paldea-combat-breed',
+    'meowth-galar': 'meowth-galar',
+    'corsola-galar': 'corsola-galar'
+  };
+
+  if (aliasMap[rawInput]) {
+    rawInput = aliasMap[rawInput];
+  }
+
+  try {
+    // Try direct endpoint first (e.g. darmanitan-galar-standard or vulpix-alola)
+    let res = await fetch(`https://pokeapi.co/api/v2/pokemon/${rawInput}`);
+    let data;
+
+    // 2. If direct fetch fails, strip regional/form tags to get base species name for fallback
+    if (!res.ok) {
+      const baseSpeciesQuery = rawInput.split('-')[0];
+      const speciesRes = await fetch(`https://pokeapi.co/api/v2/pokemon-species/${baseSpeciesQuery}`);
+      if (!speciesRes.ok) throw new Error('Not found');
+      const speciesData = await speciesRes.json();
+      
+      const defaultVariety = speciesData.varieties.find(v => v.is_default) || speciesData.varieties[0];
+      res = await fetch(defaultVariety.pokemon.url);
+      data = await res.json();
+    } else {
+      data = await res.json();
+    }
+
+    const formName = data.name.toLowerCase();
+    const speciesName = data.species.name.toLowerCase();
+    const types = data.types.map(t => t.type.name);
+
+    const haObj = data.abilities.find(a => a.is_hidden);
+    const hasHiddenAbility = Boolean(haObj);
     
-    .manual-box {
-      max-width: 500px; margin: 0 auto 20px auto; background: var(--card-bg);
-      border: 1px dashed var(--accent-gold); padding: 12px; border-radius: 8px; text-align: center;
-    }
-    .manual-box input {
-      width: 70%; padding: 8px; border-radius: 6px; border: 1px solid var(--border-color);
-      background: var(--bg-color); color: var(--text-main); font-size: 0.85rem;
-    }
-    .manual-box button {
-      padding: 8px 12px; background: var(--accent-gold); color: black; font-weight: bold;
-      border: none; border-radius: 6px; cursor: pointer;
-    }
+    const formattedName = formName.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
 
-    .search-box { max-width: 500px; margin: 0 auto 25px auto; display: flex; gap: 8px; }
-    input[type="text"] {
-      width: 100%; padding: 12px 16px; border-radius: 8px; border: 1px solid var(--border-color);
-      background: var(--card-bg); color: var(--text-main); font-size: 1rem;
-    }
-    input:focus { outline: 2px solid var(--accent-red); }
-    .btn { padding: 12px 20px; background-color: var(--accent-red); color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
-    .btn:hover { opacity: 0.9; }
+    // Check exact form name, raw input, base species name, or regional form entries in sheet
+    const isOwned = ownedPokemonSet.has(formName) || 
+                    ownedPokemonSet.has(originalSearchInput) ||
+                    ownedPokemonSet.has(speciesName) || 
+                    Array.from(ownedPokemonSet).some(item => item.startsWith(`${speciesName}-`));
 
-    .result-container { max-width: 500px; margin: 0 auto; }
-    .card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 20px; text-align: center; }
-    .card img { width: 110px; height: 110px; image-rendering: pixelated; }
-    .card h2 { text-transform: capitalize; margin: 8px 0 4px 0; }
-    
-    .types-list { display: flex; justify-content: center; gap: 6px; margin: 8px 0 14px 0; }
-    .type-badge { padding: 3px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: bold; text-transform: uppercase; }
-    .type-grass { background: #78c850; color: #000; }
-    .type-fire { background: #f08030; color: #fff; }
-    .type-water { background: #6890f0; color: #fff; }
-    .type-electric { background: #f8d030; color: #000; }
-    .type-ice { background: #98d8d8; color: #000; }
-    .type-fighting { background: #c03028; color: #fff; }
-    .type-poison { background: #a040a0; color: #fff; }
-    .type-ground { background: #e0c068; color: #000; }
-    .type-flying { background: #a890f0; color: #fff; }
-    .type-psychic { background: #f85888; color: #fff; }
-    .type-bug { background: #a8b820; color: #000; }
-    .type-rock { background: #b8a038; color: #fff; }
-    .type-ghost { background: #705598; color: #fff; }
-    .type-dragon { background: #7038f8; color: #fff; }
-    .type-dark { background: #705848; color: #fff; }
-    .type-steel { background: #b8b8d0; color: #000; }
-    .type-fairy { background: #ee99ac; color: #000; }
-    .type-normal { background: #a8a878; color: #000; }
-
-    .status-badge { display: inline-block; padding: 8px 18px; border-radius: 20px; font-weight: bold; font-size: 0.95rem; margin-top: 10px; }
-    .owned { background: rgba(34, 197, 94, 0.2); color: var(--accent-green); border: 1px solid var(--accent-green); }
-    .not-owned { background: rgba(239, 68, 68, 0.15); color: var(--accent-red); border: 1px solid var(--accent-red); }
-
-    .ability-box { background: #0f172a; padding: 10px; border-radius: 8px; margin: 12px 0; font-size: 0.95rem; }
-    .ability-name { color: var(--accent-gold); font-weight: bold; text-transform: capitalize; }
-    .no-ha { color: var(--text-muted); font-style: italic; }
-    .loading { text-align: center; color: var(--text-muted); font-style: italic; }
-  </style>
-
-  <script>
-    // Direct Published Google Sheet CSV Link
-    const CSV_LINK = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSOKm-ncx04X6arOfeV1MNW5Yzk5Yox1s38W7671moh3iIOwu5U49uC62svNn2v2NNPWZYy6FtxKbbA/pub?gid=0&single=true&output=csv';
-
-    let ownedPokemonSet = new Set();
-
-    function parseCSV(text) {
-      if (!text || text.includes('<!DOCTYPE')) {
-        throw new Error('Received non-CSV response');
-      }
-
-      const lines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l);
-      const set = new Set();
-      
-      for (let i = 0; i < lines.length; i++) {
-        const cols = lines[i].split(',').map(c => c.trim().replace(/^"|"$/g, ''));
-        if (cols[0]) {
-          // Preserves exact form entries (e.g. "vulpix-alola", "darmanitan-galar")
-          const cleanName = cols[0].toLowerCase().trim();
-          if (cleanName && cleanName !== 'pokemon_name' && cleanName !== 'name' && cleanName !== 'pokemon') {
-            set.add(cleanName);
-          }
-        }
-      }
-      return set;
+    // Format sprite filenames for Showdown assets
+    let spriteName = formName;
+    if (formName === 'nidoran-f' || formName === 'nidoran-m') {
+      spriteName = formName.replace('-', '');
+    } else if (formName === 'darmanitan-galar-standard') {
+      spriteName = 'darmanitan-galar';
+    } else if (formName === 'darmanitan-standard') {
+      spriteName = 'darmanitan';
     }
 
-    function updateInventoryDisplay(set) {
-      ownedPokemonSet = set;
-      const debugBox = document.getElementById('debugStatus');
-      const manualBox = document.getElementById('manualBox');
-      
-      if (debugBox) {
-        debugBox.innerHTML = `<span style="color:var(--accent-green)">✓ Connected to Sheet! (${ownedPokemonSet.size} Pokémon Loaded)</span>`;
-      }
-      if (manualBox) manualBox.style.display = 'none';
-    }
+    const showdownSprite = `https://play.pokemonshowdown.com/sprites/gen5/${spriteName}.png`;
+    const defaultSprite = data.sprites.front_default || 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/0.png';
 
-    async function loadInventory() {
-      const debugBox = document.getElementById('debugStatus');
-      const manualBox = document.getElementById('manualBox');
-
-      try {
-        const cacheBusterUrl = `${CSV_LINK}&t=${Date.now()}`;
-        const res = await fetch(cacheBusterUrl);
+    container.innerHTML = `
+      <div class="card">
+        <img src="${showdownSprite}" 
+             onerror="this.onerror=null; this.src='${defaultSprite}';" 
+             alt="${formattedName}">
+        <h2>${formattedName}</h2>
         
-        if (!res.ok) throw new Error(`HTTP Error ${res.status}`);
-        
-        const text = await res.text();
-        const set = parseCSV(text);
-        
-        if (set.size > 0) {
-          updateInventoryDisplay(set);
-          return;
-        } else {
-          throw new Error('Sheet returned 0 Pokémon');
-        }
+        <div class="types-list">
+          ${types.map(t => `<span class="type-badge type-${t}">${t}</span>`).join('')}
+        </div>
 
-      } catch (err) {
-        console.warn('Direct fetch failed, trying proxy fallback...', err);
-        
-        try {
-          const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(CSV_LINK)}`;
-          const res = await fetch(proxyUrl);
-          const text = await res.text();
-          const set = parseCSV(text);
-          
-          if (set.size > 0) {
-            updateInventoryDisplay(set);
-            return;
-          }
-        } catch (proxyErr) {
-          console.error('All automated fetch attempts failed:', proxyErr);
-          if (debugBox) {
-            debugBox.innerHTML = `<span style="color:var(--accent-gold)">⚠️ Couldn't auto-fetch Google Sheet. Use manual paste below:</span>`;
-          }
-          if (manualBox) manualBox.style.display = 'block';
-        }
-      }
-    }
+        <div class="ability-box">
+          ${hasHiddenAbility ? `
+            Hidden Ability: <span class="ability-name">${haObj.ability.name.replace(/-/g, ' ')}</span>
+          ` : `
+            <span class="no-ha">${formattedName} does not have a Hidden Ability</span>
+          `}
+        </div>
 
-    function processManualData() {
-      const input = document.getElementById('manualCsvInput').value;
-      const lines = input.split(/[\n,]+/).map(s => s.trim().toLowerCase()).filter(s => s);
-      const set = new Set();
-      
-      lines.forEach(item => {
-        const clean = item.trim();
-        if (clean && clean !== 'pokemon_name') {
-          set.add(clean);
-        }
-      });
-
-      if (set.size > 0) {
-        updateInventoryDisplay(set);
-      } else {
-        alert('No valid Pokémon names found.');
-      }
-    }
-
-    async function searchPokemon() {
-      const rawInput = document.getElementById('searchInput').value.toLowerCase().trim();
-      const container = document.getElementById('resultContainer');
-      
-      if (!rawInput) {
-        container.innerHTML = '';
-        return;
-      }
-
-      container.innerHTML = '<p class="loading">Searching Pokémon database...</p>';
-
-      try {
-        let res = await fetch(`https://pokeapi.co/api/v2/pokemon/${rawInput}`);
-        let data;
-
-        // Fallback for multi-form base names (e.g., pumpkaboo, wormadam, toxtricity, darmanitan)
-        if (!res.ok) {
-          const speciesRes = await fetch(`https://pokeapi.co/api/v2/pokemon-species/${rawInput}`);
-          if (!speciesRes.ok) throw new Error('Not found');
-          const speciesData = await speciesRes.json();
-          
-          const defaultVariety = speciesData.varieties.find(v => v.is_default) || speciesData.varieties[0];
-          res = await fetch(defaultVariety.pokemon.url);
-          data = await res.json();
-        } else {
-          data = await res.json();
-        }
-
-        const formName = data.name.toLowerCase();
-        const speciesName = data.species.name.toLowerCase();
-        const types = data.types.map(t => t.type.name);
-
-        const haObj = data.abilities.find(a => a.is_hidden);
-        const hasHiddenAbility = Boolean(haObj);
-        
-        const formattedName = formName.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-
-        // Check exact form name, base species name, or any variant of that species in sheet
-        const isOwned = ownedPokemonSet.has(formName) || 
-                        ownedPokemonSet.has(speciesName) || 
-                        Array.from(ownedPokemonSet).some(item => item.startsWith(`${speciesName}-`));
-
-        // Format sprite filenames for Showdown assets
-        let spriteName = formName;
-        if (formName === 'nidoran-f' || formName === 'nidoran-m') {
-          spriteName = formName.replace('-', '');
-        } else if (formName === 'darmanitan-galar-standard') {
-          spriteName = 'darmanitan-galar';
-        } else if (formName === 'darmanitan-standard') {
-          spriteName = 'darmanitan';
-        }
-
-        const showdownSprite = `https://play.pokemonshowdown.com/sprites/gen5/${spriteName}.png`;
-        const defaultSprite = data.sprites.front_default || 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/0.png';
-
-        container.innerHTML = `
-          <div class="card">
-            <img src="${showdownSprite}" 
-                 onerror="this.onerror=null; this.src='${defaultSprite}';" 
-                 alt="${formattedName}">
-            <h2>${formattedName}</h2>
-            
-            <div class="types-list">
-              ${types.map(t => `<span class="type-badge type-${t}">${t}</span>`).join('')}
+        ${hasHiddenAbility ? (
+          isOwned ? `
+            <div class="status-badge owned">
+              ✓ IN COLLECTION
             </div>
-
-            <div class="ability-box">
-              ${hasHiddenAbility ? `
-                Hidden Ability: <span class="ability-name">${haObj.ability.name.replace(/-/g, ' ')}</span>
-              ` : `
-                <span class="no-ha">${formattedName} does not have a Hidden Ability</span>
-              `}
+          ` : `
+            <div class="status-badge not-owned">
+              ✗ NOT IN COLLECTION
             </div>
+          `
+        ) : ''}
+      </div>
+    `;
 
-            ${hasHiddenAbility ? (
-              isOwned ? `
-                <div class="status-badge owned">
-                  ✓ IN COLLECTION
-                </div>
-              ` : `
-                <div class="status-badge not-owned">
-                  ✗ NOT IN COLLECTION
-                </div>
-              `
-            ) : ''}
-          </div>
-        `;
-
-      } catch (err) {
-        container.innerHTML = `<p style="text-align:center; color: var(--text-muted); margin-top: 15px;">No Pokémon found named "${rawInput}". Check your spelling!</p>`;
-      }
-    }
-
-    window.addEventListener('DOMContentLoaded', () => {
-      document.getElementById('searchBtn').addEventListener('click', searchPokemon);
-      document.getElementById('searchInput').addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') searchPokemon();
-      });
-      loadInventory();
-    });
-  </script>
-</head>
-<body>
-
-  <header>
-    <h1>🐒 Hugo's HA Collection</h1>
-    <p>Search any pokemon to see whether Hugo owns it or not</p>
-  </header>
-
-  <div id="debugStatus">Connecting to Google Sheet...</div>
-
-  <!-- Manual Input Backup Box -->
-  <div class="manual-box" id="manualBox" style="display: none;">
-    <p style="font-size: 0.85rem; margin-bottom: 8px;">Paste Pokémon List (e.g., <code>chimchar, pumpkaboo, vulpix-alola</code>):</p>
-    <input type="text" id="manualCsvInput" placeholder="chimchar, vulpix-alola">
-    <button onclick="processManualData()">Set Inventory</button>
-  </div>
-
-  <div class="search-box">
-    <input type="text" id="searchInput" placeholder="Type Pokémon name (e.g. zzz)...">
-    <button class="btn" id="searchBtn">Search</button>
-  </div>
-
-  <div class="result-container" id="resultContainer"></div>
-
-</body>
-</html>
+  } catch (err) {
+    container.innerHTML = `<p style="text-align:center; color: var(--text-muted); margin-top: 15px;">No Pokémon found named "${originalSearchInput}". Check your spelling!</p>`;
+  }
+}
