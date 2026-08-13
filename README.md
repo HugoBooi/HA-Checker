@@ -1,4 +1,4 @@
-# ⚡ Cobblemon HA Collection Checker
+# 🐒 Cobblemon HA Collection Checker
 
 A fast, responsive web application designed for **Cobblemon** players to search any Pokémon, view its **Hidden Ability (HA)** and types, and check whether it is in your collection via live Google Sheets auto-sync.
 
@@ -30,7 +30,7 @@ Check out the live webpage hosted on GitHub:
 To connect your own Pokémon collection to the app:
 
 1. Create a **Google Sheet**.
-2. List your owned Pokémon in **Column A** (one entry per row, e.g., `chimchar`, `vulpix-alola`, `darmanitan-galar`).
+2. List your owned Pokémon in **Column A** (one entry per row, e.g., `chimchar`, `monferno`, `darmanitan-galar`).
 3. Publish your sheet:
    - Click **File** $\rightarrow$ **Share** $\rightarrow$ **Publish to web**.
    - Change "Entire Document" to your specific sheet tab.
