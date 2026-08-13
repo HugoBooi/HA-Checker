@@ -98,7 +98,7 @@
       for (let i = 0; i < lines.length; i++) {
         const cols = lines[i].split(',').map(c => c.trim().replace(/^"|"$/g, ''));
         if (cols[0]) {
-          // Preserves full hyphenated names like "nidoran-f", "nidoran-m", "vulpix-alola"
+          // Keeps exact form names (e.g. "vulpix", "vulpix-alola", "nidoran-f")
           const cleanName = cols[0].toLowerCase().trim();
           if (cleanName && cleanName !== 'pokemon_name' && cleanName !== 'name' && cleanName !== 'pokemon') {
             set.add(cleanName);
@@ -197,18 +197,23 @@
         if (!res.ok) throw new Error('Not found');
         const data = await res.json();
 
-        const baseSpeciesName = data.species.name.toLowerCase(); // e.g., "nidoran-f"
+        // Use data.name for exact regional/form variant matching (e.g. "vulpix-alola")
+        const formName = data.name.toLowerCase(); 
         const types = data.types.map(t => t.type.name);
 
         const haObj = data.abilities.find(a => a.is_hidden);
         const hasHiddenAbility = Boolean(haObj);
         
-        const formattedName = baseSpeciesName.charAt(0).toUpperCase() + baseSpeciesName.slice(1);
-        const isOwned = ownedPokemonSet.has(baseSpeciesName);
+        const formattedName = formName.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+        const isOwned = ownedPokemonSet.has(formName);
 
-        // Showdown sprites require removing hyphens for Nidoran (nidoranf / nidoranm)
-        const showdownSpriteName = baseSpeciesName.replace(/-/g, '');
-        const showdownSprite = `https://play.pokemonshowdown.com/sprites/gen5/${showdownSpriteName}.png`;
+        // Handles Showdown sprite URLs (Nidoran: nidoranf/nidoranm; Regional forms: vulpix-alola)
+        let spriteName = formName;
+        if (formName === 'nidoran-f' || formName === 'nidoran-m') {
+          spriteName = formName.replace('-', '');
+        }
+
+        const showdownSprite = `https://play.pokemonshowdown.com/sprites/gen5/${spriteName}.png`;
         const defaultSprite = data.sprites.front_default || 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/0.png';
 
         container.innerHTML = `
@@ -269,13 +274,13 @@
 
   <!-- Manual Input Backup Box -->
   <div class="manual-box" id="manualBox" style="display: none;">
-    <p style="font-size: 0.85rem; margin-bottom: 8px;">Paste Pokémon List (e.g., <code>chimchar, monferno, nidoran-f</code>):</p>
-    <input type="text" id="manualCsvInput" placeholder="chimchar, iron fist">
+    <p style="font-size: 0.85rem; margin-bottom: 8px;">Paste Pokémon List (e.g., <code>vulpix, vulpix-alola, nidoran-f</code>):</p>
+    <input type="text" id="manualCsvInput" placeholder="vulpix, vulpix-alola">
     <button onclick="processManualData()">Set Inventory</button>
   </div>
 
   <div class="search-box">
-    <input type="text" id="searchInput" placeholder="Type Pokémon name (e.g. chimchar, nidoran-f, infernape)...">
+    <input type="text" id="searchInput" placeholder="Type Pokémon name (e.g. vulpix, vulpix-alola, nidoran-f)...">
     <button class="btn" id="searchBtn">Search</button>
   </div>
 
