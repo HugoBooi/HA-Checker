@@ -34,20 +34,3 @@ Check out the live webpage hosted on GitHub:
 👉 **[Cobblemon HA Checker Live](https://hugobooi.github.io/HA-Checker/)**
 
 ---
-
-## 📊 Setting Up Your Google Sheet
-
-To create your own HA Checker
-
-1. Create a **Google Sheet**.
-2. Inset **pokemon_name** as the Column A1
-3. List your owned Pokémon starting in **Column A2** (one entry per row, e.g., `chimchar`, `monferno`, `darmanitan-galar`).
-4. Publish your sheet:
-   - Click **File** $\rightarrow$ **Share** $\rightarrow$ **Publish to web**.
-   - Change "Entire Document" to your specific sheet tab.
-   - Select **Comma-separated values (.csv)**.
-   - Click **Publish** and copy the URL.
-5. Replace the `CSV_LINK` constant in `index.html`:
-
-```javascript
-const CSV_LINK = 'YOUR_PUBLISHED_CSV_LINK_HERE';
