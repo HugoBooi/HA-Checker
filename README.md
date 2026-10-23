@@ -11,9 +11,20 @@ A fast, responsive web application designed for **Cobblemon** players to search 
 
 ## ✨ Features
 
-- **Live Google Sheets Auto-Sync:** Fetches your owned Pokémon automatically from a published Google Sheet CSV feed on load (with CORS proxy fallback).
+- **Real-Time Google Sheet Syncing** Automatically fetches, parses, and updates inventory from a published Google Sheet CSV output.
 - **Hidden Ability Lookup:** Uses PokéAPI to fetch official Hidden Abilities, types, and animated Gen 5 sprites from Pokémon Showdown.
-- **Smart Form & Regional Variant Support:** Handles special regional variants (Alolan, Galarian, Hisuian, Paldean), gendered forms (`nidoran-f`, `nidoran-m`), and multi-form species (`wormadam`, `pumpkaboo`, `toxtricity`).
+- **Smart Autocomplete Suggestions** Pre-fetches PokéAPI species and form names on load to provide real-time top 5 search-engine-style suggestions as you type.
+- **Direct Sheet Access** Features a centered shortcut button allowing players to open and browse the complete Google Sheet in a new tab.
+
+---
+
+## 💡 How Search Queries Work
+
+- Multi-word names use hyphens: iron-hands, tapu-koko, great-tusk.
+
+- Regional forms use region suffixes: vulpix-alola, meowth-galar, growlithe-hisui, wooper-paldea.
+
+- Shorthand aliases like darmanitan-galar or tauros-paldea map directly to PokéAPI's default variety endpoints while checking exact ownership status in your sheet.
 
 ---
 
