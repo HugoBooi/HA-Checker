@@ -20,11 +20,11 @@ A fast, responsive web application designed for **Cobblemon** players to search 
 
 ## 💡 How Search Queries Work
 
-- Multi-word names use hyphens: 'iron-hands', 'tapu-koko', 'great-tusk'.
+- Multi-word names use hyphens: `iron-hands`, `tapu-koko`, `great-tusk`.
 
-- Regional forms use region suffixes: 'vulpix-alola', 'meowth-galar', 'growlithe-hisui', 'wooper-paldea'.
+- Regional forms use region suffixes: `vulpix-alola`, `meowth-galar`, `growlithe-hisui`, `wooper-paldea`.
 
-- Shorthand aliases like 'darmanitan-galar' or 'tauros-paldea' map directly to PokéAPI's default variety endpoints while checking exact ownership status in your sheet.
+- Shorthand aliases like `darmanitan-galar` or `tauros-paldea` map directly to PokéAPI's default variety endpoints while checking exact ownership status in your sheet.
 
 ---
 
