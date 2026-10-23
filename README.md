@@ -11,10 +11,10 @@ A fast, responsive web application designed for **Cobblemon** players to search 
 
 ## ✨ Features
 
-- **Real-Time Google Sheet Syncing** Automatically fetches, parses, and updates inventory from a published Google Sheet CSV output.
-- **Hidden Ability Lookup:** Uses PokéAPI to fetch official Hidden Abilities, types, and animated Gen 5 sprites from Pokémon Showdown.
-- **Smart Autocomplete Suggestions** Pre-fetches PokéAPI species and form names on load to provide real-time top 5 search-engine-style suggestions as you type.
-- **Direct Sheet Access** Features a centered shortcut button allowing players to open and browse the complete Google Sheet in a new tab.
+- **Real-Time Google Sheet Syncing** - Automatically fetches, parses, and updates inventory from a published Google Sheet CSV output.
+- **Hidden Ability Lookup:** - Uses PokéAPI to fetch official Hidden Abilities, types, and animated Gen 5 sprites from Pokémon Showdown.
+- **Smart Autocomplete Suggestions** - Pre-fetches PokéAPI species and form names on load to provide real-time top 5 search-engine-style suggestions as you type.
+- **Direct Sheet Access** - Features a centered shortcut button allowing players to open and browse the complete Google Sheet in a new tab.
 
 ---
 
